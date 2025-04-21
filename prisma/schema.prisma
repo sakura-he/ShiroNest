@@ -1,0 +1,250 @@
+// 这是您的 Prisma 模式文件，
+// 了解更多信息请查看文档: https://pris.ly/d/prisma-schema
+
+// 如果您在寻找加速查询或轻松扩展无服务器或边缘功能的方法，
+// 请尝试 Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js" // 指定生成的客户端类型
+}
+
+datasource db {
+  provider = "mysql" // 数据库提供者
+  url      = env("DATABASE_URL") // 数据库连接字符串
+}
+
+model shiro_user {
+  id         Int       @id @default(autoincrement()) /// 用户ID，自动递增
+  email      String?   @unique /// 用户邮箱，唯一
+  username   String    @unique /// 用户名
+  password   String /// 用户密码
+  psalt      String? /// 密码盐，可选
+  avatar     String?   @default("https://img.yzcdn.cn/vant/ipad.png") /// 用户头像，默认为默认头像
+  phone      String?   @unique /// 用户电话，唯一
+  nickname   String? /// 用户昵称，可选
+  remark     String? /// 用户备注，可选
+  status     Int       @default(1) /// 用户状态，默认为1
+  created_at DateTime  @default(now()) /// 创建时间，默认为当前时间
+  updated_at DateTime  @updatedAt /// 更新时间，自动更新
+  created_by Int? /// 创建人，可选
+  is_lock    Boolean   @default(false) /// 是否锁定，默认为未锁定
+  last_login DateTime? /// 最后登录时间，可选
+  test      String? /// 测试字段，可选
+  user_logs shiro_user_log[] /// 用户日志
+  roles     shiro_user_role[] /// 用户角色
+}
+
+model shiro_role {
+  id          Int               @id @default(autoincrement()) /// 角色ID，自动递增
+  name        String /// 角色名称
+  code        String            @unique /// 角色编码
+  description String? // 角色描述，可选
+  created_by  Int? /// 创建人，可选
+  created_at  DateTime          @default(now()) // 创建时间，默认为当前时间
+  updated_at  DateTime          @updatedAt // 更新时间，自动更新
+  users       shiro_user_role[] /// 用户角色
+  status      RoleStatusEnum    @default(ENABLE) // 角色状态，默认为启用
+  menus       shiro_role_menu[] /// 角色菜单
+}
+
+enum RoleStatusEnum {
+  ENABLE /// 启用
+  DISABLE /// 禁用
+}
+
+model shiro_user_role {
+  role_id Int // 角色ID
+  role    shiro_role @relation(fields: [role_id], references: [id]) // 角色关系
+  user_id Int // 用户ID
+  user    shiro_user @relation(fields: [user_id], references: [id] ,onDelete: Cascade) // 用户关系
+
+  @@id([role_id, user_id])
+}
+
+model shiro_menu {
+  id              Int                @id @default(autoincrement()) // 菜单ID，自动递增
+  pid             Int? /// 父菜单ID，可选
+  component_name  String? /// 组件名称，可选
+  description     String? // 菜单描述，可选
+  title           String /// 菜单标题
+  component_path  String? /// 菜单 vue 组件文件地址
+  permission      String /// 菜单权限标识
+  type            MenuTypeEnum /// 菜单类型(目录,页面,按钮)
+  path            String? /// 路由子路径(用做前端的路由)如果是菜单外链,则是外链地址
+  icon            String? /// 图标，可选
+  order           Int? /// 排序值，可选
+  layout          MenuLayoutTypeEnum @default(LAYOUT_SIDE) /// 布局样式
+  page_type       PageTypeEnum       @default(PAGE) /// 页面类型，默认为页面
+  is_resident     Boolean            @default(false) /// 是否常驻，默认为非常驻(如果是常驻,用户不可在 tab 栏取消固定)
+  is_cache        Boolean            @default(false) /// 是否缓存，默认为不缓存
+  is_menu_visible Boolean            @default(true) /// 是否可见，默认为可见
+  status          MenuStatusEnum     @default(ENABLE) /// 菜单状态，默认为启用
+  show_children   Boolean            @default(true) /// 是否显示子菜单，默认为显示
+  is_tab_visible  Boolean            @default(true) /// 是否在 tab 栏显示，默认为显示
+  created_at      DateTime           @default(now()) // 创建时间，默认为当前时间
+  updated_at      DateTime           @updatedAt // 更新时间，自动更新
+  roles           shiro_role_menu[] /// 角色
+}
+
+enum MenuStatusEnum {
+  ENABLE /// 启用
+  DISABLE /// 禁用
+}
+
+enum PageTypeEnum {
+  PAGE /// 页面
+  LINK /// 链接
+  IFRAME /// iframe
+}
+
+enum MenuTypeEnum {
+  Catalog
+  Page
+  Button
+}
+
+enum MenuLayoutTypeEnum {
+  LAYOUT_DEFAULT // 默认布局
+  LAYOUT_SIDE // 侧边布局
+  LAYOUT_TOP
+}
+
+model shiro_role_menu {
+  role_id Int // 角色ID
+  role    shiro_role @relation(fields: [role_id], references: [id],onDelete: Cascade)
+  menu_id Int // 菜单ID
+  menu    shiro_menu @relation(fields: [menu_id], references: [id])
+
+  @@id([role_id, menu_id])
+}
+
+model shiro_user_log {
+  id            Int        @id @unique @default(autoincrement()) // 日志ID，自动递增且唯一
+  user_id       Int // 用户ID
+  user_log_user shiro_user @relation(fields: [user_id], references: [id]) // 用户关系
+  user_info     Json // 用户信息，存储为JSON格式
+  ip            String // 用户IP地址
+  request       Json // 请求数据，存储为JSON格式
+  response      Json // 响应数据，存储为JSON格式
+  status        Int // 日志状态
+  handler       String // 处理程序名称
+  created_at    DateTime   @default(now()) // 创建时间，默认为当前时间
+  updated_at    DateTime   @updatedAt // 更新时间，自动更新
+}
+
+model shiro_file_chunk {
+  id                 Int               @id @default(autoincrement()) // 切片ID，自动递增
+  user_id            Int /// 上传用户ID
+  file_uid           String /// 文件唯一标识
+  file_name          String /// 文件名称
+  file_size          BigInt /// 文件大小
+  file_type          String /// 文件类型
+  file_hash          String /// 文件哈希值
+  file_chunks_length Int /// 文件切片总长度
+  chunk_index        Int /// 切片索引
+  chunk_hash         String /// 切片哈希值
+  chunk_size         Int /// 切片大小
+  chunk_path         String /// 切片存储路径
+  chunk_name         String /// 切片名称
+  file_merge_id      Int? /// 文件合并ID，可选
+  file_merge         shiro_file_merge? @relation(fields: [file_merge_id], references: [id]) // 文件合并关系
+  ref_chunk_id       Int? /// 复用切片ID，可选
+  is_delete          Boolean           @default(false) // 切片是否已删除，默认为未删除
+  created_at         DateTime          @default(now()) // 创建时间，默认为当前时间
+}
+
+model shiro_file_merge {
+  id             Int                @id @default(autoincrement()) // 合并文件ID，自动递增
+  user_id        Int /// 用户ID
+  file_uid       String /// 文件唯一标识
+  file_name      String /// 文件名称
+  file_size      BigInt /// 文件大小
+  file_type      String /// 文件类型
+  file_hash      String /// 文件哈希值
+  file_path      String /// 文件存储路径
+  file_chunks    shiro_file_chunk[] // 关联的文件切片
+  status         FileMergeStatus    @default(MERGE_ING) /// 合并状态，默认为合并中
+  is_delete      Boolean            @default(false) /// 文件是否已删除，默认为未删除
+  ref_file_id    Int? /// 引用合并文件的切片ID，可选
+  merge_progress Int                @default(0) /// 合并进度，默认为0
+  error_msg      String? /// 错误信息，可选
+  created_at     DateTime           @default(now()) // 创建时间，默认为当前时间
+}
+
+enum FileMergeStatus {
+  MERGE_ING /// 合并中
+  MERGE_SUCCESS /// 合并成功
+  MERGE_FAILED /// 合并失败
+}
+
+model shiro_task {
+  id         Int              @id @default(autoincrement()) // 任务ID，自动递增
+  user_id    Int /// 任务创建人ID
+  name       String           @unique /// 任务名称
+  remark     String? /// 任务备注，可选
+  cron       String /// 任务时间表达式
+  options    Json? /// 任务参数，可选
+  ///  执行策略: 立即执行即开启任务 执行一次:执行一次后关闭任务 手动执行:任务的执行需要手动操作
+  params     Json? /// 任务参数，可选
+  handler    String /// 任务处理程序
+  strategy   TaskStrategy /// 任务执行策略，默认为立即执行
+  status     TaskStatus /// 任务开启状态
+  logs       shiro_task_log[] // 任务日志
+  created_at DateTime         @default(now()) /// 创建时间，默认为当前时间
+  updated_at DateTime         @updatedAt /// 更新时间，自动更新
+}
+
+enum TaskStrategy {
+  AUTO /// 自动执行
+  ONCE_AUTO /// 
+  MANUAL /// 手动执行
+}
+
+enum TaskStatus {
+  ENABLE /// 启用
+  DISABLE /// 禁用
+}
+
+model shiro_task_log {
+  id         Int           @id @default(autoincrement()) // 日志ID，自动递增
+  task_id    Int /// 任务ID
+  task       shiro_task    @relation(fields: [task_id], references: [id]) // 任务关系
+  log        String? /// 日志内容，可选
+  status     TaskLogStatus /// 任务状态，默认为停止
+  created_at DateTime      @default(now()) /// 创建时间，默认为当前时间
+}
+
+enum TaskLogStatus {
+  SUCCESS /// 成功
+  FAILED /// 失败
+}
+
+/// 数据字典表
+model shiro_dict {
+  id          Int              @id @default(autoincrement()) // 字典ID，自动递增
+  category    String // 字典类别
+  name        String // 字典名称
+  value       String // 字典值
+  description String? // 描述
+  status      Int              @default(1) // 是否启用
+  sort_order  Int              @default(0) // 排序值
+  created_at  DateTime         @default(now()) // 创建时间
+  updated_at  DateTime         @updatedAt // 更新时间
+  dict_key    shiro_dict_key[] // 字典Key关系
+
+  @@unique([category, value]) // 字典类别编码联合唯一约束
+}
+
+/// 数据字典表
+model shiro_dict_key {
+  id          Int        @id @default(autoincrement()) // 字典Key ID，自动递增
+  dict_id     Int // 字典ID
+  dict        shiro_dict @relation(fields: [dict_id], references: [id]) // 字典关系
+  key         String // 字典Key
+  value       String // 字典值
+  description String? // 描述
+  status      Int        @default(1) // 是否启用
+  sort_order  Int        @default(0) // 排序值
+  created_at  DateTime   @default(now()) // 创建时间
+  updated_at  DateTime   @updatedAt // 更新时间
+}
