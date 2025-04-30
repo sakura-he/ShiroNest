@@ -22,6 +22,7 @@ import { RoleModule } from './role/role.module';
 import { TaskModule } from './system/task/task.module';
 import { UserController } from './user/user.controller';
 import { UserModule } from './user/user.module';
+import { SatModule } from './sat/sat.module';
 @Module({
     imports: [
         TaskModule,
@@ -52,7 +53,8 @@ import { UserModule } from './user/user.module';
         AuthModule,
         RoleModule,
         MenuModule,
-        AccountModule
+        AccountModule,
+        SatModule
     ],
     controllers: [AppController],
     providers: [
